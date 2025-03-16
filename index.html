@@ -218,11 +218,31 @@
                             measuring = false;
                         }
                     }
+
+                    // Add approximate distance markings on the graph
+                    drawDistanceMarkings();
                 });
             } else {
                 alert('Accelerometer not supported on this device.');
             }
         }
-    </script>
-</body>
-</html>
+
+        // Function to draw approximate distance markings on the trajectory graph
+        function drawDistanceMarkings() {
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 1;
+
+            // Add vertical lines at regular intervals along the X-axis for distance markings
+            let distanceInterval = 100; // distance between each marking
+            for (let i = distanceInterval; i < canvas.width; i += distanceInterval) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+
+            // Label the distance markers
+            ctx.fillStyle = "yellow";
+            ctx.font = "14px Arial";
+            for (let i = distanceInterval; i < canvas.width; i += distanceInterval) {
+                ctx.fillText
