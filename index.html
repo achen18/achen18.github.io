@@ -73,6 +73,12 @@
         #impact-force, #current-acceleration {
             animation: pulse 1.5s infinite;
         }
+
+        canvas {
+            margin-top: 20px;
+            border: 2px solid white;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -80,7 +86,10 @@
     <button id="start-button">Start Measurement</button>
     <div class="data" id="impact-force">Impact Force: Waiting...</div>
     <div class="data" id="current-acceleration">Current Acceleration: Waiting...</div>
-    
+
+    <!-- Canvas for the trajectory graph -->
+    <canvas id="trajectory-canvas" width="800" height="400"></canvas>
+
     <script>
         let measuring = false;
         let accelerationHistory = [];
@@ -91,6 +100,15 @@
         let declineCounter = 0;
         const declineThreshold = 20;
         let firstPeak = 0;
+        let velocity = 0;
+        let posX = 50;  // Starting position on X-axis
+        let posY = 350; // Starting position on Y-axis (bottom of canvas)
+        const trajectory = [];
+        const gravity = 9.8;  // Placeholder gravity value (if you're simulating vertical motion)
+
+        // Get the canvas and context
+        const canvas = document.getElementById('trajectory-canvas');
+        const ctx = canvas.getContext('2d');
 
         function requestPermission() {
             if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -116,6 +134,10 @@
             pastAcceleration = 0;
             declineCounter = 0;
             firstPeak = 0;
+            velocity = 0;
+            posX = 50;
+            posY = 350;
+            trajectory.length = 0; // Clear the previous trajectory
             document.getElementById('impact-force').textContent = 'Impact Force: Measuring...';
             requestPermission();
         });
@@ -130,14 +152,51 @@
                     );
                     
                     let now = Date.now();
-                    if (now - lastUpdate >= 500) { 
+                    if (now - lastUpdate >= 500) {
                         document.getElementById('current-acceleration').textContent = 'Current Acceleration: ' + totalAcceleration.toFixed(3) + ' m/s²';
                         lastUpdate = now;
                     }
-                    
+
                     if (measuring) {
                         accelerationHistory.push(totalAcceleration);
                         
+                        // Update velocity: v = u + at, where u is the initial velocity (0 here)
+                        velocity += totalAcceleration * 0.1;  // Time interval (0.1s approx.)
+
+                        // Update position using simple kinematics: s = ut + 0.5at²
+                        posX += velocity * 0.1;  // Time interval (0.1s approx.)
+                        posY -= totalAcceleration * 2;  // Simulating a downward trajectory
+
+                        // If the object hits the bottom of the canvas, stop the motion
+                        if (posY > canvas.height) {
+                            posY = canvas.height;
+                            measuring = false;
+                        }
+
+                        // Store trajectory point
+                        trajectory.push({ x: posX, y: posY });
+
+                        // Clear the canvas
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Draw the trajectory path
+                        ctx.beginPath();
+                        ctx.moveTo(trajectory[0].x, trajectory[0].y);
+                        for (let i = 1; i < trajectory.length; i++) {
+                            ctx.lineTo(trajectory[i].x, trajectory[i].y);
+                        }
+                        ctx.strokeStyle = "white";
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+
+                        // Draw current position (as a circle)
+                        ctx.beginPath();
+                        ctx.arc(posX, posY, 5, 0, 2 * Math.PI);
+                        ctx.fillStyle = "red";
+                        ctx.fill();
+                        ctx.closePath();
+
+                        // Update impact force if a peak is detected
                         if (totalAcceleration < pastAcceleration) {
                             declineCounter++;
                         } else {
@@ -155,6 +214,7 @@
                             }
                             declineCounter = 0;
                         }
+
                         pastAcceleration = totalAcceleration;
                     }
                 });
