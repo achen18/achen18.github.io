@@ -109,6 +109,7 @@
         let initialVelocity = 0;
         let initialAngle = 45;  // Launch angle in degrees (assuming a standard angle for simplicity)
         let isFalling = false; // Whether the object is in the falling phase
+        let throwThreshold = 1.5; // Minimum acceleration threshold to start recording
 
         // Get the canvas and context
         const canvas = document.getElementById('trajectory-canvas');
@@ -155,7 +156,7 @@
                         Math.pow(event.acceleration.y || 0, 2) +
                         Math.pow(event.acceleration.z || 0, 2)
                     );
-                    
+
                     let now = Date.now();
                     if (now - lastUpdate >= 500) {
                         document.getElementById('current-acceleration').textContent = 'Current Acceleration: ' + totalAcceleration.toFixed(3) + ' m/s²';
@@ -165,21 +166,21 @@
                     if (measuring) {
                         accelerationHistory.push(totalAcceleration);
                         
-                        // If we haven't started the throw yet, wait for the initial movement
-                        if (!initialVelocity) {
+                        // Start recording after the initial "throw" is detected
+                        if (!initialVelocity && totalAcceleration > throwThreshold) {
                             initialVelocity = totalAcceleration * 5;  // Simulated force to calculate initial velocity
                             velocityX = initialVelocity * Math.cos(initialAngle * Math.PI / 180); // Horizontal velocity
                             velocityY = initialVelocity * Math.sin(initialAngle * Math.PI / 180); // Vertical velocity
                         }
-                        
+
                         // Update position using kinematics equations
                         if (!isFalling) {
                             velocityY -= gravity * 0.1; // Gravity affects vertical velocity
                         }
 
-                        // Update the position
+                        // Flip the Y-axis so that the object moves upwards initially and falls down
                         posX += velocityX * 0.1;  // Horizontal movement is constant
-                        posY += velocityY * 0.1;  // Vertical movement changes due to gravity
+                        posY -= velocityY * 0.1;  // Vertical movement changes due to gravity
 
                         // Store trajectory point
                         trajectory.push({ x: posX, y: posY });
