@@ -100,11 +100,15 @@
         let declineCounter = 0;
         const declineThreshold = 20;
         let firstPeak = 0;
-        let velocity = 0;
+        let velocityX = 0; // Horizontal velocity (constant)
+        let velocityY = 0; // Vertical velocity (affected by gravity)
         let posX = 50;  // Starting position on X-axis
         let posY = 350; // Starting position on Y-axis (bottom of canvas)
         const trajectory = [];
-        const gravity = 9.8;  // Placeholder gravity value (if you're simulating vertical motion)
+        const gravity = 9.8;  // Gravity acceleration (m/s²)
+        let initialVelocity = 0;
+        let initialAngle = 45;  // Launch angle in degrees (assuming a standard angle for simplicity)
+        let isFalling = false; // Whether the object is in the falling phase
 
         // Get the canvas and context
         const canvas = document.getElementById('trajectory-canvas');
@@ -134,7 +138,8 @@
             pastAcceleration = 0;
             declineCounter = 0;
             firstPeak = 0;
-            velocity = 0;
+            velocityX = 0;
+            velocityY = 0;
             posX = 50;
             posY = 350;
             trajectory.length = 0; // Clear the previous trajectory
@@ -160,18 +165,21 @@
                     if (measuring) {
                         accelerationHistory.push(totalAcceleration);
                         
-                        // Update velocity: v = u + at, where u is the initial velocity (0 here)
-                        velocity += totalAcceleration * 0.1;  // Time interval (0.1s approx.)
-
-                        // Update position using simple kinematics: s = ut + 0.5at²
-                        posX += velocity * 0.1;  // Time interval (0.1s approx.)
-                        posY -= totalAcceleration * 2;  // Simulating a downward trajectory
-
-                        // If the object hits the bottom of the canvas, stop the motion
-                        if (posY > canvas.height) {
-                            posY = canvas.height;
-                            measuring = false;
+                        // If we haven't started the throw yet, wait for the initial movement
+                        if (!initialVelocity) {
+                            initialVelocity = totalAcceleration * 5;  // Simulated force to calculate initial velocity
+                            velocityX = initialVelocity * Math.cos(initialAngle * Math.PI / 180); // Horizontal velocity
+                            velocityY = initialVelocity * Math.sin(initialAngle * Math.PI / 180); // Vertical velocity
                         }
+                        
+                        // Update position using kinematics equations
+                        if (!isFalling) {
+                            velocityY -= gravity * 0.1; // Gravity affects vertical velocity
+                        }
+
+                        // Update the position
+                        posX += velocityX * 0.1;  // Horizontal movement is constant
+                        posY += velocityY * 0.1;  // Vertical movement changes due to gravity
 
                         // Store trajectory point
                         trajectory.push({ x: posX, y: posY });
@@ -196,26 +204,18 @@
                         ctx.fill();
                         ctx.closePath();
 
-                        // Update impact force if a peak is detected
-                        if (totalAcceleration < pastAcceleration) {
-                            declineCounter++;
-                        } else {
-                            declineCounter = 0;
+                        // Stop recording once the object hits the ground
+                        if (posY >= canvas.height) {
+                            posY = canvas.height;
+                            measuring = false;
+                            isFalling = true;  // Start the falling phase once it hits the ground
+                            document.getElementById('impact-force').textContent = 'Impact Force: ' + impactForce.toFixed(3) + ' m/s²';
                         }
 
-                        if (declineCounter >= declineThreshold) {
-                            if (!firstPeakDetected && pastAcceleration > 3) {
-                                firstPeakDetected = true;
-                                firstPeak = pastAcceleration;
-                            } else if (firstPeakDetected && pastAcceleration > 3) {
-                                impactForce = pastAcceleration;
-                                document.getElementById('impact-force').textContent = 'Impact Force: ' + impactForce.toFixed(3) + ' m/s²';
-                                measuring = false;
-                            }
-                            declineCounter = 0;
+                        // Stop trajectory once the object is no longer moving
+                        if (posX > canvas.width || posY > canvas.height) {
+                            measuring = false;
                         }
-
-                        pastAcceleration = totalAcceleration;
                     }
                 });
             } else {
